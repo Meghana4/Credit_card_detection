@@ -22,11 +22,12 @@ def main():
 	H,W = img.shape
 	
 	#extract_credit_card
-	# ret, mask = cv2.threshold(img,0,255,cv2.THRESH_BINARY_INV+cv2.THRESH_OTSU)
-	mask = cv2.Canny(img, 30, 200)
+	ret, mask = cv2.threshold(img,0,255,cv2.THRESH_BINARY_INV+cv2.THRESH_OTSU)
+	# mask = cv2.Canny(img, 30, 200)
 
 	_,cnts,_ = cv2.findContours(mask.copy(), cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
 	cnts = sorted(cnts, key = cv2.contourArea, reverse = True)[:10]
+	largest_contour = cnts[0]
 	screenCnt = None
 	# # loop over our contours
 	for c in cnts:
@@ -36,8 +37,23 @@ def main():
 		if len(approx) == 4:
 			screenCnt = c
 			break
-
-	out = cv2.drawContours(colour_img.copy(), [screenCnt], -1, (0, 255, 0), 3)
+	if (screenCnt is None):
+		rect = cv2.minAreaRect(largest_contour)
+		box = cv2.boxPoints(rect)
+		box = np.int0(box)
+		out = cv2.drawContours(colour_img.copy(),[box],-1,(0,255,0),3)
+		# out = cv2.drawContours(colour_img.copy(), [largest_contour], -1, (0, 255, 0), 3)
+	elif (cv2.arcLength(largest_contour,True) > cv2.arcLength(screenCnt,True)):
+		# x,y,w,h =cv2.boundingRect(largest_contour)
+		rect = cv2.minAreaRect(largest_contour)
+		box = cv2.boxPoints(rect)
+		box = np.int0(box)
+		out = cv2.drawContours(colour_img.copy(),[box],-1,(0,255,0),3)
+		# out = cv2.drawContours(colour_img.copy(), [largest_contour], -1, (0, 255, 0), 3)
+		# out = cv2.rectangle(colour_img.copy(),(x,y),(x+w,y+h),(0,255,0),2)
+	else:
+		out = cv2.drawContours(colour_img.copy(), [screenCnt], -1, (0, 255, 0), 3)
+	
 	final = np.concatenate((colour_img,out),axis=1)
 	cv2.imshow("output",final)
 	cv2.waitKey(0)
