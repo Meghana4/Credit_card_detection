@@ -5,6 +5,8 @@ import matplotlib.pyplot as plt
 from matplotlib import colors
 from mpl_toolkits.mplot3d import Axes3D
 from matplotlib import cm
+from os.path import *
+from glob import glob
 
 def get_args():
     parser = argparse.ArgumentParser(description="This script detects credit card contour, ",
@@ -16,17 +18,19 @@ def get_args():
 
 def main():
 	args = get_args()
+
 	img = cv2.imread(args.image)
 	colour_img = img.copy()
 	img = cv2.cvtColor(img.copy(), cv2.COLOR_BGR2GRAY)
 	H,W = img.shape
 	
 	#extract_credit_card
-	ret, mask = cv2.threshold(img,0,255,cv2.THRESH_BINARY_INV+cv2.THRESH_OTSU)
-	# mask = cv2.Canny(img, 30, 200)
+	median = cv2.medianBlur(img,21)
+	ret, mask = cv2.threshold(median,0,255,cv2.THRESH_BINARY_INV+cv2.THRESH_OTSU)
 
 	_,cnts,_ = cv2.findContours(mask.copy(), cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
 	cnts = sorted(cnts, key = cv2.contourArea, reverse = True)[:10]
+
 	largest_contour = cnts[0]
 	screenCnt = None
 	# # loop over our contours
@@ -42,24 +46,20 @@ def main():
 		box = cv2.boxPoints(rect)
 		box = np.int0(box)
 		out = cv2.drawContours(colour_img.copy(),[box],-1,(0,255,0),3)
-		# out = cv2.drawContours(colour_img.copy(), [largest_contour], -1, (0, 255, 0), 3)
 	elif (cv2.arcLength(largest_contour,True) > cv2.arcLength(screenCnt,True)):
-		# x,y,w,h =cv2.boundingRect(largest_contour)
 		rect = cv2.minAreaRect(largest_contour)
 		box = cv2.boxPoints(rect)
 		box = np.int0(box)
 		out = cv2.drawContours(colour_img.copy(),[box],-1,(0,255,0),3)
-		# out = cv2.drawContours(colour_img.copy(), [largest_contour], -1, (0, 255, 0), 3)
-		# out = cv2.rectangle(colour_img.copy(),(x,y),(x+w,y+h),(0,255,0),2)
 	else:
-		out = cv2.drawContours(colour_img.copy(), [screenCnt], -1, (0, 255, 0), 3)
+		approx = cv2.approxPolyDP(screenCnt, 0.02* peri, True)
+		out = cv2.drawContours(colour_img.copy(), [approx], -1, (0, 255, 0), 3)
 	
-	final = np.concatenate((colour_img,out),axis=1)
-	cv2.imshow("output",final)
+	cv2.imshow("output",out)
 	cv2.waitKey(0)
 	cv2.destroyAllWindows()
-	filename = (args.image).split(".")[0] + "_output.png"
-	cv2.imwrite(filename,final)
+	filename = directory  +  ((file).split("/")[8]).split(".jpg")[0] + "_output.png"
+	cv2.imwrite(filename,out)
 
 
 if __name__ == '__main__':
